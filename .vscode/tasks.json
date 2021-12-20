@@ -6,6 +6,7 @@
 			"label": "C/C++: g++.exe build active file",
 			"command": "A:\\msys64\\mingw64\\bin\\g++.exe",
 			"args": [
+				"/std:c++latest",
 				"-fdiagnostics-color=always",
 				"-g",
 				"${file}",
@@ -26,6 +27,7 @@
 			"label": "C/C++: cl.exe build active file",
 			"command": "cl.exe",
 			"args": [
+				"/std:c++latest",
 				"/EHsc",
 				"/nologo",
 				"/Fe:",
