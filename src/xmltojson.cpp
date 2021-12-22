@@ -51,67 +51,59 @@ int readBlocks() {
     std::vector<std::string> inputss;
     std::vector<std::string> outputss;
     int blockNum = 0;
+    
+    using namespace std::string_literals;
+
+    // regex
+    // name
+    auto nameStart = "<definition name="s;
+    auto nameEnd = " category="s;
+    std::regex name(nameStart + "(.*)" + nameEnd);
+    
+    // desc
+    auto descStart = "<tooltip_properties description="s;
+    auto descEnd = " short_description="s;
+    std::regex desc(descStart + "(.*)" + descEnd);
+
+    // shortdesc
+    auto shortDescStart = "short_description="s;
+    auto shortDescEnd = "/>"s;
+    std::regex shortDesc(shortDescStart + "(.*)" + shortDescEnd);
+
+    // mass
+    auto massStart = " mass="s;
+    auto massEnd = " value="s;
+    std::regex mass(massStart + "(.*)" + massEnd);
+
+    // cost
+    auto costStart = "value="s;
+    auto costEnd = " flags="s;
+    std::regex cost(costStart + "(.*)" + costEnd);
+
+    // inputs
+    auto inputsStart = "mode=\"1\" type=\""s;
+    auto inputsEnd = "\" description=\""s;
+    std::regex inputs(inputsStart + "(.*)" + inputsEnd);
+    
+    //outputs
+    auto outputsStart = "mode=\"0\" type=\""s;
+    auto outputsEnd = "\" description=\""s;
+    std::regex outputs(outputsStart + "(.*)" + outputsEnd);
+
     for (const auto & entry : fs::directory_iterator(dir)) {
         std::string line;
         std::ifstream readxml;
         readxml.open(entry.path());
-        using namespace std::string_literals;
-
-        // name
-        auto nameStart = "<definition name="s;
-        auto nameEnd = " category="s;
-        std::regex name(nameStart + "(.*)" + nameEnd);
         
-        // desc
-        auto descStart = "<tooltip_properties description="s;
-        auto descEnd = " short_description="s;
-        std::regex desc(descStart + "(.*)" + descEnd);
-
-        // shortdesc
-        auto shortDescStart = "short_description="s;
-        auto shortDescEnd = "/>"s;
-        std::regex shortDesc(shortDescStart + "(.*)" + shortDescEnd);
-
-        // mass
-        auto massStart = " mass="s;
-        auto massEnd = " value="s;
-        std::regex mass(massStart + "(.*)" + massEnd);
-
-        // cost
-        auto costStart = "value="s;
-        auto costEnd = " flags="s;
-        std::regex cost(costStart + "(.*)" + costEnd);
-
-        // inputs
-        auto inputsStart = "mode=\"1\" type=\""s;
-        auto inputsEnd = "\" description=\""s;
-        std::regex inputs(inputsStart + "(.*)" + inputsEnd);
-        
-        //outputs
-        auto outputsStart = "mode=\"0\" type=\""s;
-        auto outputsEnd = "\" description=\""s;
-        std::regex outputs(outputsStart + "(.*)" + outputsEnd);
-
-
         std::cout << "reading block #" << blockNum <<"\n";
         inputss.push_back("");
         outputss.push_back("");
-        bool i0 = false;
-        bool i1 = false;
-        bool i2 = false;
-        bool i3 = false;
-        bool i4 = false;
-        bool i5 = false;
-        bool i6 = false;
-        bool i7 = false;
-        bool o0 = false;
-        bool o1 = false;
-        bool o2 = false;
-        bool o3 = false;
-        bool o4 = false;
-        bool o5 = false;
-        bool o6 = false;
-        bool o7 = false;
+        int in[8];
+        int out[8];
+        for(int i = 0; i < 8; i++) {
+            in[i] = false;
+            out[i] = false;
+        }
         if(readxml.is_open()){
             while(getline(readxml, line)) {
                 std::smatch rawMatched;
@@ -143,122 +135,153 @@ int readBlocks() {
                 }
                 if(std::regex_search(lineToRead, rawMatched, inputs)) {
                     if(rawMatched.size() == 2) {
-                        if(!inputss[blockNum].empty()) {
-                            inputss[blockNum] = inputss[blockNum] + ", ";
-                        }
                         std::string logicType = "unknown";
                         if(rawMatched[1].str() == "0") {
-                            logicType = "boolean";
+                            if(in[0] == false) {
+                                logicType = "boolean";
+                                in[0] = true;
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "1") {
-                            if(i0 == false) {
+                            if(in[1] == false) {
                                 logicType = "number";
+                                in[1] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "2") {
-                            if(i1 == false) {
+                            if(in[2] == false) {
                                 logicType = "power";
+                                in[2] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "3") {
-                            if(i2 == false) {
+                            if(in[3] == false) {
                                 logicType = "fluid";
+                                in[3] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "4") {
-                            if(i3 == false) {
+                            if(in[4] == false) {
                                 logicType = "electric";
+                                in[4] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "5") {
-                            if(i4 == false) {
+                            if(in[5] == false) {
                                 logicType = "composite";
+                                in[5] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "6") {
-                            if(i5 == false) {
+                            if(in[6] == false) {
                                 logicType = "video";
+                                in[6] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "7") {
-                            if(i6 == false) {
+                            if(in[7] == false) {
                                 logicType = "audio";
+                                in[7] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "8") {
-                            if(i7 == false) {
+                            if(in[8] == false) {
                                 logicType = "rope";
+                                in[8] = true;
                             } else {
                                 logicType = "";
                             }
                         } 
-                        inputss[blockNum] = inputss[blockNum] + logicType;
+                        
+                        if(logicType.compare("")) {
+                            if(!inputss[blockNum].empty()) {
+                                inputss[blockNum] = inputss[blockNum] + ", ";
+                            }
+                            inputss[blockNum] = inputss[blockNum] + logicType;
+                        }
                     }
                 }
                 if(std::regex_search(lineToRead, rawMatched, outputs)) {
                     if(rawMatched.size() == 2) {
-                        if(!outputss[blockNum].empty()) {
-                            outputss[blockNum] = outputss[blockNum] + ", ";
-                        }
                         std::string logicType = "unknown";
                         if(rawMatched[1].str() == "0") {
-                            logicType = "boolean";
+                            if(out[0] == false) {
+                                logicType = "boolean";
+                                out[0] = true;
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "1") {
-                            if(i0 == false) {
+                            if(out[1] == false) {
                                 logicType = "number";
+                                out[1] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "2") {
-                            if(i1 == false) {
+                            if(out[2] == false) {
                                 logicType = "power";
+                                out[2] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "3") {
-                            if(i2 == false) {
+                            if(out[3] == false) {
                                 logicType = "fluid";
+                                out[3] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "4") {
-                            if(i3 == false) {
+                            if(out[4] == false) {
                                 logicType = "electric";
+                                out[4] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "5") {
-                            if(i4 == false) {
+                            if(out[5] == false) {
                                 logicType = "composite";
+                                out[5] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "6") {
-                            if(i5 == false) {
+                            if(out[6] == false) {
                                 logicType = "video";
+                                out[6] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "7") {
-                            if(i6 == false) {
+                            if(out[7] == false) {
                                 logicType = "audio";
+                                out[7] = true;
                             } else {
                                 logicType = "";
                             }
                         } else if(rawMatched[1].str() == "8") {
-                            if(i7 == false) {
+                            if(out[8] == false) {
                                 logicType = "rope";
+                                out[8] = true;
                             } else {
                                 logicType = "";
                             }
-                        } 
-                        outputss[blockNum] = outputss[blockNum] + logicType;
+                        }
+                        if(logicType.compare("")) {
+                            if(!outputss[blockNum].empty()) {
+                                outputss[blockNum] = outputss[blockNum] + ", ";
+                            }
+                            outputss[blockNum] = outputss[blockNum] + logicType;
+                        }
                     }
                 }
             }
