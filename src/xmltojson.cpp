@@ -311,17 +311,17 @@ int readBlocks() {
                 writejson << "        \"name\":" << names[i] << ",\n"; // writes name
                 writejson << "        \"path\":\"public/assets/Blocks/\",\n"; // writes path
                 writejson << "        \"desc\":" << descs[i] << ",\n"; // writes desc
-                writejson << "        \"shortDesc\":" << shortDescs[i] << ",\n";
-                writejson << "        \"mass\":" << masss[i] << ",\n";
-                writejson << "        \"cost\":" << costs[i] << ",\n";
-                writejson << "        \"inputs\":\"" << inputss[i] << "\",\n";
-                writejson << "        \"outputs\":\"" << outputss[i] << "\"\n";
-                writejson << "    }";
+                writejson << "        \"shortDesc\":" << shortDescs[i] << ",\n"; // writes shortDesc
+                writejson << "        \"mass\":" << masss[i] << ",\n"; // writes mass
+                writejson << "        \"cost\":" << costs[i] << ",\n"; // writes cost
+                writejson << "        \"inputs\":\"" << inputss[i] << "\",\n"; // writes inputs
+                writejson << "        \"outputs\":\"" << outputss[i] << "\"\n"; // writes outputs
+                writejson << "    }"; // end of block data
             }
         }
         writejson << "]"; // writes ] at the end of the file
         writejson.close();
-        std::cout << "json finished writing!";
+        std::cout << "Finished Writing Json!";
     } else {
         std::cout << "error creating and opening json file!";
         }
