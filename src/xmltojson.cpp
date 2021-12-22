@@ -42,7 +42,7 @@ int start() {
     return true;
 }
 
-int readBlocks() {
+int parseBlocks() {
     std::vector<std::string> names;
     std::vector<std::string> descs;
     std::vector<std::string> shortDescs;
@@ -328,7 +328,7 @@ int readBlocks() {
     return true;
 }
 
-int readLogic() {
+int parseLogic() {
     for (const auto & entry : fs::directory_iterator(dir)) {
         std::cout << entry.path() << std::endl;
     }
@@ -375,9 +375,9 @@ int main() {
                     help();
                 } else {
                     if(i == 0) { // block
-                        readBlocks();
+                        parseBlocks();
                     } else if(i == 1) { // logic
-                        readLogic();
+                        parseLogic();
                     }
                 }
             }
