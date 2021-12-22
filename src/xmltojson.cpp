@@ -96,6 +96,22 @@ int readBlocks() {
         std::cout << "reading block #" << blockNum <<"\n";
         inputss.push_back("");
         outputss.push_back("");
+        bool i0 = false;
+        bool i1 = false;
+        bool i2 = false;
+        bool i3 = false;
+        bool i4 = false;
+        bool i5 = false;
+        bool i6 = false;
+        bool i7 = false;
+        bool o0 = false;
+        bool o1 = false;
+        bool o2 = false;
+        bool o3 = false;
+        bool o4 = false;
+        bool o5 = false;
+        bool o6 = false;
+        bool o7 = false;
         if(readxml.is_open()){
             while(getline(readxml, line)) {
                 std::smatch rawMatched;
@@ -134,21 +150,53 @@ int readBlocks() {
                         if(rawMatched[1].str() == "0") {
                             logicType = "boolean";
                         } else if(rawMatched[1].str() == "1") {
-                            logicType = "number";
+                            if(i0 == false) {
+                                logicType = "number";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "2") {
-                            logicType = "power";
+                            if(i1 == false) {
+                                logicType = "power";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "3") {
-                            logicType = "fluid";
+                            if(i2 == false) {
+                                logicType = "fluid";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "4") {
-                            logicType = "electric";
+                            if(i3 == false) {
+                                logicType = "electric";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "5") {
-                            logicType = "composite";
+                            if(i4 == false) {
+                                logicType = "composite";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "6") {
-                            logicType = "video";
+                            if(i5 == false) {
+                                logicType = "video";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "7") {
-                            logicType = "audio";
+                            if(i6 == false) {
+                                logicType = "audio";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "8") {
-                            logicType = "rope";
+                            if(i7 == false) {
+                                logicType = "rope";
+                            } else {
+                                logicType = "";
+                            }
                         } 
                         inputss[blockNum] = inputss[blockNum] + logicType;
                     }
@@ -162,21 +210,53 @@ int readBlocks() {
                         if(rawMatched[1].str() == "0") {
                             logicType = "boolean";
                         } else if(rawMatched[1].str() == "1") {
-                            logicType = "number";
+                            if(i0 == false) {
+                                logicType = "number";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "2") {
-                            logicType = "power";
+                            if(i1 == false) {
+                                logicType = "power";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "3") {
-                            logicType = "fluid";
+                            if(i2 == false) {
+                                logicType = "fluid";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "4") {
-                            logicType = "electric";
+                            if(i3 == false) {
+                                logicType = "electric";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "5") {
-                            logicType = "composite";
+                            if(i4 == false) {
+                                logicType = "composite";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "6") {
-                            logicType = "video";
+                            if(i5 == false) {
+                                logicType = "video";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "7") {
-                            logicType = "audio";
+                            if(i6 == false) {
+                                logicType = "audio";
+                            } else {
+                                logicType = "";
+                            }
                         } else if(rawMatched[1].str() == "8") {
-                            logicType = "rope";
+                            if(i7 == false) {
+                                logicType = "rope";
+                            } else {
+                                logicType = "";
+                            }
                         } 
                         outputss[blockNum] = outputss[blockNum] + logicType;
                     }
