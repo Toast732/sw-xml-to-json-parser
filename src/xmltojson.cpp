@@ -71,13 +71,13 @@ int parseBlocks() {
     std::regex shortDesc(shortDescStart + "(.*)" + shortDescEnd);
 
     // mass
-    auto massStart = " mass="s;
-    auto massEnd = " value="s;
+    auto massStart = " mass=\""s;
+    auto massEnd = "\" value="s;
     std::regex mass(massStart + "(.*)" + massEnd);
 
     // cost
-    auto costStart = "value="s;
-    auto costEnd = " flags="s;
+    auto costStart = "value=\""s;
+    auto costEnd = "\" flags="s;
     std::regex cost(costStart + "(.*)" + costEnd);
 
     // inputs
