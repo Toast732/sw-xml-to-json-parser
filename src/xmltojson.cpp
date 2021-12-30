@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string version = "0.1";
+std::string version = "0.1.1";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
@@ -50,6 +50,7 @@ int parseBlocks() {
     std::vector<std::string> costs;
     std::vector<std::string> inputss;
     std::vector<std::string> outputss;
+    std::vector<std::string> deprecateds;
     int blockNum = 0;
     
     using namespace std::string_literals;
@@ -90,6 +91,9 @@ int parseBlocks() {
     auto outputsEnd = "\" description=\""s;
     std::regex outputs(outputsStart + "(.*)" + outputsEnd);
 
+    //deprecated
+    std::regex deprecated("Deprecated");
+
     for (const auto & entry : fs::directory_iterator(dir)) {
         std::string line;
         std::ifstream readxml;
@@ -98,6 +102,7 @@ int parseBlocks() {
         std::cout << "reading block #" << blockNum <<"\n";
         inputss.push_back("");
         outputss.push_back("");
+        deprecateds.push_back("false");
         int in[8];
         int out[8];
         for(int i = 0; i < 8; i++) {
@@ -113,16 +118,6 @@ int parseBlocks() {
                         names.push_back(rawMatched[1].str());
                     }
                 }
-                if(std::regex_search(lineToRead, rawMatched, desc)) {
-                    if(rawMatched.size() == 2) {
-                        descs.push_back(rawMatched[1].str());
-                    }
-                }
-                if(std::regex_search(lineToRead, rawMatched, shortDesc)) {
-                    if(rawMatched.size() == 2) {
-                        shortDescs.push_back(rawMatched[1].str());
-                    }
-                }
                 if(std::regex_search(lineToRead, rawMatched, mass)) {
                     if(rawMatched.size() == 2) {
                         masss.push_back(rawMatched[1].str());
@@ -133,7 +128,20 @@ int parseBlocks() {
                         costs.push_back(rawMatched[1].str());
                     }
                 }
-                if(std::regex_search(lineToRead, rawMatched, inputs)) {
+                if(std::regex_search(lineToRead, rawMatched, deprecated)) {
+                    deprecateds[blockNum] = "true";
+                }
+                else if(std::regex_search(lineToRead, rawMatched, desc)) {
+                    if(rawMatched.size() == 2) {
+                        descs.push_back(rawMatched[1].str());
+                    }
+                }
+                if(std::regex_search(lineToRead, rawMatched, shortDesc)) {
+                    if(rawMatched.size() == 2) {
+                        shortDescs.push_back(rawMatched[1].str());
+                    }
+                }
+                else if(std::regex_search(lineToRead, rawMatched, inputs)) {
                     if(rawMatched.size() == 2) {
                         std::string logicType = "unknown";
                         if(rawMatched[1].str() == "0") {
@@ -209,7 +217,7 @@ int parseBlocks() {
                         }
                     }
                 }
-                if(std::regex_search(lineToRead, rawMatched, outputs)) {
+                else if(std::regex_search(lineToRead, rawMatched, outputs)) {
                     if(rawMatched.size() == 2) {
                         std::string logicType = "unknown";
                         if(rawMatched[1].str() == "0") {
@@ -315,7 +323,8 @@ int parseBlocks() {
                 writejson << "        \"mass\":" << masss[i] << ",\n"; // writes mass
                 writejson << "        \"cost\":" << costs[i] << ",\n"; // writes cost
                 writejson << "        \"inputs\":\"" << inputss[i] << "\",\n"; // writes inputs
-                writejson << "        \"outputs\":\"" << outputss[i] << "\"\n"; // writes outputs
+                writejson << "        \"outputs\":\"" << outputss[i] << "\",\n"; // writes outputs
+                writejson << "        \"deprecated\":" << deprecateds[i] << "\n"; // writes if its deprecated or not
                 writejson << "    }"; // end of block data
             }
         }
@@ -350,7 +359,7 @@ int checkFile(bool correctPath) {
             if(0 >= attempts) {
                 return false;
             } else {
-                std::cout << attempts << " Attempts remaining...\n>";
+                std::cout << attempts << " Attempts remaining...\n> ";
                 attempts--;
             }
         }
