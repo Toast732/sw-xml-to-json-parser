@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string version = "0.1.2";
+std::string version = "0.1.3";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
@@ -23,6 +23,10 @@ std::string getInput() {
     std::string input = "";
     std::cin >> input;
     return input;
+}
+
+std::string base_name(std::string const & path) { // gets file name, without the path
+  return path.substr(path.find_last_of("/\\") + 1);
 }
 
 int help() {
@@ -43,13 +47,14 @@ int start() {
 
 int parseBlocks() {
     std::vector<std::string> names;
-    std::vector<std::string> categories;
+    std::vector<std::string> fileNames;
     std::vector<std::string> descs;
     std::vector<std::string> shortDescs;
-    std::vector<std::string> masss;
-    std::vector<std::string> costs;
     std::vector<std::string> inputss;
     std::vector<std::string> outputss;
+    std::vector<std::string> categories;
+    std::vector<std::string> masss;
+    std::vector<std::string> costs;
     std::vector<std::string> deprecateds;
 
     std::vector<std::string> blacklistedPaths;
@@ -172,7 +177,8 @@ int parseBlocks() {
                 in[i] = false;
                 out[i] = false;
             }
-            std::cout << " dir: " << entry.path() << "\n";
+            std::cout << " File Name: " << base_name(entry.path().string()) << "\n";
+            fileNames.push_back("Stormworks/rom/data/definitions/" + base_name(entry.path().string()));
             if(readxml.is_open()){
                 while(getline(readxml, line)) {
                     std::smatch rawMatched;
@@ -180,21 +186,6 @@ int parseBlocks() {
                     if(std::regex_search(lineToRead, rawMatched, name)) { // gets "name" value 
                         if(rawMatched.size() == 2) {
                             names.push_back(rawMatched[1].str());
-                        }
-                    }
-                    if(std::regex_search(lineToRead, rawMatched, category)) { // gets "category" value 
-                        if(rawMatched.size() == 2) {
-                            categories.push_back(rawMatched[1].str());
-                        }
-                    }
-                    if(std::regex_search(lineToRead, rawMatched, mass)) { // gets "mass" value 
-                        if(rawMatched.size() == 2) {
-                            masss.push_back(rawMatched[1].str());
-                        }
-                    }
-                    if(std::regex_search(lineToRead, rawMatched, cost)) { // gets "value" value 
-                        if(rawMatched.size() == 2) {
-                            costs.push_back(rawMatched[1].str());
                         }
                     }
                     if(std::regex_search(lineToRead, rawMatched, deprecated)) { // checks if its deprecated or not, via the name of the item, checks for "(Deprecated)" in the name
@@ -361,6 +352,21 @@ int parseBlocks() {
                             }
                         }
                     }
+                    if(std::regex_search(lineToRead, rawMatched, category)) { // gets "category" value 
+                        if(rawMatched.size() == 2) {
+                            categories.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, mass)) { // gets "mass" value 
+                        if(rawMatched.size() == 2) {
+                            masss.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, cost)) { // gets "value" value 
+                        if(rawMatched.size() == 2) {
+                            costs.push_back(rawMatched[1].str());
+                        }
+                    }
                 }
             }
             blockNum++;
@@ -388,6 +394,7 @@ int parseBlocks() {
                     writejson << ",\n    {\n";
                 }
                 writejson << "        \"name\":" << names[i] << ",\n"; // writes name
+                writejson << "        \"fileName\":\"" << fileNames[i] << "\",\n"; // writes file Name
                 writejson << "        \"path\":\"public/assets/Blocks/\",\n"; // writes path
                 writejson << "        \"desc\":" << descs[i] << ",\n"; // writes desc
                 writejson << "        \"shortDesc\":" << shortDescs[i] << ",\n"; // writes shortDesc
