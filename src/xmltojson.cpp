@@ -103,7 +103,10 @@ int parseBlocks() {
     std::ifstream readConfig;
     std::string line;
     std::cout << "current directory: " << std::filesystem::current_path();
-    readConfig.open("..\\src\\blockBlacklist.json");
+
+
+    // starts reading config for the blacklist
+    readConfig.open("..\\src\\blockBlacklist.json"); 
     if(readConfig.is_open()){
         while(getline(readConfig, line)) {
             std::smatch rawMatched;
@@ -119,8 +122,11 @@ int parseBlocks() {
         return false;
     }
     readConfig.close();
+
+
+    // reads each block file, and with their id it assignes if its blacklisted or not
     int blacklistNum = 0;
-    for (const auto & entry : fs::directory_iterator(dir)) {
+    for (const auto & entry : fs::directory_iterator(dir)) { 
         int blacklistedChecks = 0;
         std::cout << "Checking if block #" << blacklistNum << " is Blacklisted... ( ";
         for(int i = 0; i < blacklistedPaths.size(); i++) {
@@ -141,9 +147,11 @@ int parseBlocks() {
         blacklistNum++;
     }
 
-    blacklistNum = 0;
+
+    // reads all block files
+    blacklistNum = 0; 
     for (const auto & entry : fs::directory_iterator(dir)) {
-        if(blacklistedBlocks[blacklistNum] == "false") {
+        if(blacklistedBlocks[blacklistNum] == "false") { // if the block is not blacklisted
             std::string line;
             std::ifstream readxml;
             readxml.open(entry.path());
@@ -163,35 +171,35 @@ int parseBlocks() {
                 while(getline(readxml, line)) {
                     std::smatch rawMatched;
                     auto lineToRead = line + ""s;
-                    if(std::regex_search(lineToRead, rawMatched, name)) {
+                    if(std::regex_search(lineToRead, rawMatched, name)) { // gets "name" value 
                         if(rawMatched.size() == 2) {
                             names.push_back(rawMatched[1].str());
                         }
                     }
-                    if(std::regex_search(lineToRead, rawMatched, mass)) {
+                    if(std::regex_search(lineToRead, rawMatched, mass)) { // gets "mass" value 
                         if(rawMatched.size() == 2) {
                             masss.push_back(rawMatched[1].str());
                         }
                     }
-                    if(std::regex_search(lineToRead, rawMatched, cost)) {
+                    if(std::regex_search(lineToRead, rawMatched, cost)) { // gets "value" value 
                         if(rawMatched.size() == 2) {
                             costs.push_back(rawMatched[1].str());
                         }
                     }
-                    if(std::regex_search(lineToRead, rawMatched, deprecated)) {
+                    if(std::regex_search(lineToRead, rawMatched, deprecated)) { // checks if its deprecated or not, via the name of the item, checks for "(Deprecated)" in the name
                         deprecateds[blockNum] = "true";
                     }
-                    else if(std::regex_search(lineToRead, rawMatched, desc)) {
+                    else if(std::regex_search(lineToRead, rawMatched, desc)) { // gets "description" value 
                         if(rawMatched.size() == 2) {
                             descs.push_back(rawMatched[1].str());
                         }
                     }
-                    if(std::regex_search(lineToRead, rawMatched, shortDesc)) {
+                    if(std::regex_search(lineToRead, rawMatched, shortDesc)) { // gets "short_description" value
                         if(rawMatched.size() == 2) {
                             shortDescs.push_back(rawMatched[1].str());
                         }
                     }
-                    else if(std::regex_search(lineToRead, rawMatched, inputs)) {
+                    else if(std::regex_search(lineToRead, rawMatched, inputs)) { // gets all inputs, logic and physical, only shows one of each type
                         if(rawMatched.size() == 2) {
                             std::string logicType = "unknown";
                             if(rawMatched[1].str() == "0") {
@@ -267,7 +275,7 @@ int parseBlocks() {
                             }
                         }
                     }
-                    else if(std::regex_search(lineToRead, rawMatched, outputs)) {
+                    else if(std::regex_search(lineToRead, rawMatched, outputs)) { // gets all outputs, logic and physical, only shows one of each type
                         if(rawMatched.size() == 2) {
                             std::string logicType = "unknown";
                             if(rawMatched[1].str() == "0") {
