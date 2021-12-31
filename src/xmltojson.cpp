@@ -11,12 +11,11 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string version = "0.1.1";
+std::string version = "0.1.2";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
 fs::path dir;
-
 
 std::string defLoc = "\\rom\\data\\definitions";
 
@@ -51,6 +50,9 @@ int parseBlocks() {
     std::vector<std::string> inputss;
     std::vector<std::string> outputss;
     std::vector<std::string> deprecateds;
+
+    std::vector<std::string> blacklistedPaths;
+    std::vector<std::string> blacklistedBlocks;
     int blockNum = 0;
     
     using namespace std::string_literals;
@@ -94,208 +96,258 @@ int parseBlocks() {
     //deprecated
     std::regex deprecated("Deprecated");
 
-    for (const auto & entry : fs::directory_iterator(dir)) {
-        std::string line;
-        std::ifstream readxml;
-        readxml.open(entry.path());
-        
-        std::cout << "reading block #" << blockNum <<"\n";
-        inputss.push_back("");
-        outputss.push_back("");
-        deprecateds.push_back("false");
-        int in[8];
-        int out[8];
-        for(int i = 0; i < 8; i++) {
-            in[i] = false;
-            out[i] = false;
+    // blacklist
+    auto blacklistStart = "\"fileName\":\""s;
+    auto blastlistEnd = "\""s;
+    std::regex blacklisted(blacklistStart + "(.*)" + blastlistEnd);
+    std::ifstream readConfig;
+    std::string line;
+    std::cout << "current directory: " << std::filesystem::current_path();
+    readConfig.open("..\\src\\blockBlacklist.json");
+    if(readConfig.is_open()){
+        while(getline(readConfig, line)) {
+            std::smatch rawMatched;
+            auto lineToRead = line + ""s;
+            if(std::regex_search(lineToRead, rawMatched, blacklisted)) {
+                if(rawMatched.size() == 2) {
+                    blacklistedPaths.push_back(rawMatched[1].str());
+                }
+            }
         }
-        if(readxml.is_open()){
-            while(getline(readxml, line)) {
-                std::smatch rawMatched;
-                auto lineToRead = line + ""s;
-                if(std::regex_search(lineToRead, rawMatched, name)) {
-                    if(rawMatched.size() == 2) {
-                        names.push_back(rawMatched[1].str());
-                    }
-                }
-                if(std::regex_search(lineToRead, rawMatched, mass)) {
-                    if(rawMatched.size() == 2) {
-                        masss.push_back(rawMatched[1].str());
-                    }
-                }
-                if(std::regex_search(lineToRead, rawMatched, cost)) {
-                    if(rawMatched.size() == 2) {
-                        costs.push_back(rawMatched[1].str());
-                    }
-                }
-                if(std::regex_search(lineToRead, rawMatched, deprecated)) {
-                    deprecateds[blockNum] = "true";
-                }
-                else if(std::regex_search(lineToRead, rawMatched, desc)) {
-                    if(rawMatched.size() == 2) {
-                        descs.push_back(rawMatched[1].str());
-                    }
-                }
-                if(std::regex_search(lineToRead, rawMatched, shortDesc)) {
-                    if(rawMatched.size() == 2) {
-                        shortDescs.push_back(rawMatched[1].str());
-                    }
-                }
-                else if(std::regex_search(lineToRead, rawMatched, inputs)) {
-                    if(rawMatched.size() == 2) {
-                        std::string logicType = "unknown";
-                        if(rawMatched[1].str() == "0") {
-                            if(in[0] == false) {
-                                logicType = "boolean";
-                                in[0] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "1") {
-                            if(in[1] == false) {
-                                logicType = "number";
-                                in[1] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "2") {
-                            if(in[2] == false) {
-                                logicType = "power";
-                                in[2] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "3") {
-                            if(in[3] == false) {
-                                logicType = "fluid";
-                                in[3] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "4") {
-                            if(in[4] == false) {
-                                logicType = "electric";
-                                in[4] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "5") {
-                            if(in[5] == false) {
-                                logicType = "composite";
-                                in[5] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "6") {
-                            if(in[6] == false) {
-                                logicType = "video";
-                                in[6] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "7") {
-                            if(in[7] == false) {
-                                logicType = "audio";
-                                in[7] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "8") {
-                            if(in[8] == false) {
-                                logicType = "rope";
-                                in[8] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } 
-                        
-                        if(logicType.compare("")) {
-                            if(!inputss[blockNum].empty()) {
-                                inputss[blockNum] = inputss[blockNum] + ", ";
-                            }
-                            inputss[blockNum] = inputss[blockNum] + logicType;
+    } else {
+        std::cout << "error, blockBlacklist did not open!";
+        return false;
+    }
+    readConfig.close();
+    int blacklistNum = 0;
+    for (const auto & entry : fs::directory_iterator(dir)) {
+        int blacklistedChecks = 0;
+        std::cout << "Checking if block #" << blacklistNum << " is Blacklisted... ( ";
+        for(int i = 0; i < blacklistedPaths.size(); i++) {
+            std::smatch rawMatched;
+            std::string fileName{entry.path().string()};
+            std::regex blacklistedToCheck(blacklistedPaths[i]);
+            if(std::regex_search(fileName, rawMatched, blacklistedToCheck)) {
+                blacklistedChecks++;
+            }
+        }
+        if(blacklistedChecks > 0) { // if it is blacklised
+            blacklistedBlocks.push_back("true"); // is blacklisted
+            std::cout << "true )\n";
+        } else { // if its not
+            blacklistedBlocks.push_back("false"); // isn't blacklisted
+            std::cout << "false )\n";
+        }
+        blacklistNum++;
+    }
+
+    blacklistNum = 0;
+    for (const auto & entry : fs::directory_iterator(dir)) {
+        if(blacklistedBlocks[blacklistNum] == "false") {
+            std::string line;
+            std::ifstream readxml;
+            readxml.open(entry.path());
+            
+            std::cout << "reading block #" << blockNum;
+            inputss.push_back("");
+            outputss.push_back("");
+            deprecateds.push_back("false");
+            int in[8];
+            int out[8];
+            for(int i = 0; i < 8; i++) {
+                in[i] = false;
+                out[i] = false;
+            }
+            std::cout << " dir: " << entry.path() << "\n";
+            if(readxml.is_open()){
+                while(getline(readxml, line)) {
+                    std::smatch rawMatched;
+                    auto lineToRead = line + ""s;
+                    if(std::regex_search(lineToRead, rawMatched, name)) {
+                        if(rawMatched.size() == 2) {
+                            names.push_back(rawMatched[1].str());
                         }
                     }
-                }
-                else if(std::regex_search(lineToRead, rawMatched, outputs)) {
-                    if(rawMatched.size() == 2) {
-                        std::string logicType = "unknown";
-                        if(rawMatched[1].str() == "0") {
-                            if(out[0] == false) {
-                                logicType = "boolean";
-                                out[0] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "1") {
-                            if(out[1] == false) {
-                                logicType = "number";
-                                out[1] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "2") {
-                            if(out[2] == false) {
-                                logicType = "power";
-                                out[2] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "3") {
-                            if(out[3] == false) {
-                                logicType = "fluid";
-                                out[3] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "4") {
-                            if(out[4] == false) {
-                                logicType = "electric";
-                                out[4] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "5") {
-                            if(out[5] == false) {
-                                logicType = "composite";
-                                out[5] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "6") {
-                            if(out[6] == false) {
-                                logicType = "video";
-                                out[6] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "7") {
-                            if(out[7] == false) {
-                                logicType = "audio";
-                                out[7] = true;
-                            } else {
-                                logicType = "";
-                            }
-                        } else if(rawMatched[1].str() == "8") {
-                            if(out[8] == false) {
-                                logicType = "rope";
-                                out[8] = true;
-                            } else {
-                                logicType = "";
+                    if(std::regex_search(lineToRead, rawMatched, mass)) {
+                        if(rawMatched.size() == 2) {
+                            masss.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, cost)) {
+                        if(rawMatched.size() == 2) {
+                            costs.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, deprecated)) {
+                        deprecateds[blockNum] = "true";
+                    }
+                    else if(std::regex_search(lineToRead, rawMatched, desc)) {
+                        if(rawMatched.size() == 2) {
+                            descs.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, shortDesc)) {
+                        if(rawMatched.size() == 2) {
+                            shortDescs.push_back(rawMatched[1].str());
+                        }
+                    }
+                    else if(std::regex_search(lineToRead, rawMatched, inputs)) {
+                        if(rawMatched.size() == 2) {
+                            std::string logicType = "unknown";
+                            if(rawMatched[1].str() == "0") {
+                                if(in[0] == false) {
+                                    logicType = "boolean";
+                                    in[0] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "1") {
+                                if(in[1] == false) {
+                                    logicType = "number";
+                                    in[1] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "2") {
+                                if(in[2] == false) {
+                                    logicType = "power";
+                                    in[2] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "3") {
+                                if(in[3] == false) {
+                                    logicType = "fluid";
+                                    in[3] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "4") {
+                                if(in[4] == false) {
+                                    logicType = "electric";
+                                    in[4] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "5") {
+                                if(in[5] == false) {
+                                    logicType = "composite";
+                                    in[5] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "6") {
+                                if(in[6] == false) {
+                                    logicType = "video";
+                                    in[6] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "7") {
+                                if(in[7] == false) {
+                                    logicType = "audio";
+                                    in[7] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "8") {
+                                if(in[8] == false) {
+                                    logicType = "rope";
+                                    in[8] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } 
+                            
+                            if(logicType.compare("")) {
+                                if(!inputss[blockNum].empty()) {
+                                    inputss[blockNum] = inputss[blockNum] + ", ";
+                                }
+                                inputss[blockNum] = inputss[blockNum] + logicType;
                             }
                         }
-                        if(logicType.compare("")) {
-                            if(!outputss[blockNum].empty()) {
-                                outputss[blockNum] = outputss[blockNum] + ", ";
+                    }
+                    else if(std::regex_search(lineToRead, rawMatched, outputs)) {
+                        if(rawMatched.size() == 2) {
+                            std::string logicType = "unknown";
+                            if(rawMatched[1].str() == "0") {
+                                if(out[0] == false) {
+                                    logicType = "boolean";
+                                    out[0] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "1") {
+                                if(out[1] == false) {
+                                    logicType = "number";
+                                    out[1] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "2") {
+                                if(out[2] == false) {
+                                    logicType = "power";
+                                    out[2] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "3") {
+                                if(out[3] == false) {
+                                    logicType = "fluid";
+                                    out[3] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "4") {
+                                if(out[4] == false) {
+                                    logicType = "electric";
+                                    out[4] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "5") {
+                                if(out[5] == false) {
+                                    logicType = "composite";
+                                    out[5] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "6") {
+                                if(out[6] == false) {
+                                    logicType = "video";
+                                    out[6] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "7") {
+                                if(out[7] == false) {
+                                    logicType = "audio";
+                                    out[7] = true;
+                                } else {
+                                    logicType = "";
+                                }
+                            } else if(rawMatched[1].str() == "8") {
+                                if(out[8] == false) {
+                                    logicType = "rope";
+                                    out[8] = true;
+                                } else {
+                                    logicType = "";
+                                }
                             }
-                            outputss[blockNum] = outputss[blockNum] + logicType;
+                            if(logicType.compare("")) {
+                                if(!outputss[blockNum].empty()) {
+                                    outputss[blockNum] = outputss[blockNum] + ", ";
+                                }
+                                outputss[blockNum] = outputss[blockNum] + logicType;
+                            }
                         }
                     }
                 }
             }
+            blockNum++;
+            readxml.close();
         }
-        blockNum++;
-        readxml.close();
+        blacklistNum++;
     }
     std::cout << "Attempting to remove previous output...";
     if( remove( "sw_blocks.json" ) != 0 ) {
@@ -310,7 +362,7 @@ int parseBlocks() {
         writejson << "[\n"; // opens file with [
         for(int i = 0; i < names.size(); i++) {
             if(!names[i].empty()) {
-                std::cout << "writing block #" << i << "\n";
+                std::cout << "writing block #" << i << " Name: " << names[i] <<"\n";
                 if(i == 0) {
                     writejson << "    {\n";
                 } else {
