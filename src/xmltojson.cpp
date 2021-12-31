@@ -43,6 +43,7 @@ int start() {
 
 int parseBlocks() {
     std::vector<std::string> names;
+    std::vector<std::string> categories;
     std::vector<std::string> descs;
     std::vector<std::string> shortDescs;
     std::vector<std::string> masss;
@@ -62,6 +63,11 @@ int parseBlocks() {
     auto nameStart = "<definition name="s;
     auto nameEnd = " category="s;
     std::regex name(nameStart + "(.*)" + nameEnd);
+
+    // category
+    auto categoryStart = " category=\""s;
+    auto categoryEnd = "\" type="s;
+    std::regex category(categoryStart + "(.*)" + categoryEnd);
     
     // desc
     auto descStart = "<tooltip_properties description="s;
@@ -174,6 +180,11 @@ int parseBlocks() {
                     if(std::regex_search(lineToRead, rawMatched, name)) { // gets "name" value 
                         if(rawMatched.size() == 2) {
                             names.push_back(rawMatched[1].str());
+                        }
+                    }
+                    if(std::regex_search(lineToRead, rawMatched, category)) { // gets "category" value 
+                        if(rawMatched.size() == 2) {
+                            categories.push_back(rawMatched[1].str());
                         }
                     }
                     if(std::regex_search(lineToRead, rawMatched, mass)) { // gets "mass" value 
@@ -380,10 +391,11 @@ int parseBlocks() {
                 writejson << "        \"path\":\"public/assets/Blocks/\",\n"; // writes path
                 writejson << "        \"desc\":" << descs[i] << ",\n"; // writes desc
                 writejson << "        \"shortDesc\":" << shortDescs[i] << ",\n"; // writes shortDesc
-                writejson << "        \"mass\":" << masss[i] << ",\n"; // writes mass
-                writejson << "        \"cost\":" << costs[i] << ",\n"; // writes cost
                 writejson << "        \"inputs\":\"" << inputss[i] << "\",\n"; // writes inputs
                 writejson << "        \"outputs\":\"" << outputss[i] << "\",\n"; // writes outputs
+                writejson << "        \"category\":" << categories[i] << ",\n"; // writes category
+                writejson << "        \"mass\":" << masss[i] << ",\n"; // writes mass
+                writejson << "        \"cost\":" << costs[i] << ",\n"; // writes cost
                 writejson << "        \"deprecated\":" << deprecateds[i] << "\n"; // writes if its deprecated or not
                 writejson << "    }"; // end of block data
             }
