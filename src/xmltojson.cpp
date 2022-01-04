@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <regex>
 #include <fstream>
+#include <bitset>
 
 
 namespace fs = std::filesystem;
@@ -11,11 +12,13 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string version = "0.1.3";
+std::string version = "0.1.4";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
 fs::path dir;
+
+int isHiddenFlag = 536870912;
 
 std::string defLoc = "\\rom\\data\\definitions";
 
@@ -56,9 +59,13 @@ int parseBlocks() {
     std::vector<std::string> masss;
     std::vector<std::string> costs;
     std::vector<std::string> deprecateds;
+    std::vector<unsigned> flags;
+    std::vector<std::string> isHiddens;
 
     std::vector<std::string> blacklistedPaths;
     std::vector<std::string> blacklistedBlocks;
+
+    std::string hiddenItemSuffix[] = {"_b", "_head", " child", "_b_fluid", " b", "_b_round"};
     int blockNum = 0;
     
     using namespace std::string_literals;
@@ -106,6 +113,10 @@ int parseBlocks() {
 
     //deprecated
     std::regex deprecated("Deprecated");
+
+    auto flagStart = "\" flags=\""s;
+    auto flagEnd = "\" tags="s;
+    std::regex flag(flagStart + "(.*)" + flagEnd);
 
     // blacklist
     auto blacklistStart = "\"fileName\":\""s;
@@ -158,7 +169,6 @@ int parseBlocks() {
         blacklistNum++;
     }
 
-
     // reads all block files
     blacklistNum = 0; 
     for (const auto & entry : fs::directory_iterator(dir)) {
@@ -170,6 +180,9 @@ int parseBlocks() {
             std::cout << "reading block #" << blockNum;
             inputss.push_back("");
             outputss.push_back("");
+            flags.push_back(0);
+            isHiddens.push_back("true");
+
             deprecateds.push_back("false");
             int in[8];
             int out[8];
@@ -367,6 +380,25 @@ int parseBlocks() {
                             costs.push_back(rawMatched[1].str());
                         }
                     }
+                    if(std::regex_search(lineToRead, rawMatched, flag)) { // gets "flags" value 
+                        if(rawMatched.size() == 2) {
+                            flags[blockNum] = std::stoi(rawMatched[1].str());
+                            // if the block is hidden in the inventory
+                            if ((flags[blockNum] & isHiddenFlag) == false) { // if the is hidden flag is flag
+                                // checks if the file name contains a suffix that is related to being a 2nd part of a block, and is hidden, if it goes through all of the suffix without a hit, it will be marked as not hidden
+                                int hiddenSuffixCheck = 0;
+                                for(int bID = 0; bID <= sizeof(hiddenItemSuffix)/sizeof(*hiddenItemSuffix); bID++) {
+                                    if(fileNames[blockNum].substr(fileNames[blockNum].find_last_of(".") - hiddenItemSuffix[bID].length()) != hiddenItemSuffix[bID] + ".xml") {
+                                        hiddenSuffixCheck++;
+                                    }
+                                }
+                                if( hiddenSuffixCheck == sizeof(hiddenItemSuffix)/sizeof(*hiddenItemSuffix)) {
+                                    isHiddens[blockNum] = "false";
+                                }
+                            }
+                            
+                        }
+                    }
                 }
             }
             blockNum++;
@@ -374,7 +406,24 @@ int parseBlocks() {
         }
         blacklistNum++;
     }
-    std::cout << "Attempting to remove previous output...";
+
+    // validates variables for mistakes
+    blockNum = 0;
+    blacklistNum = 0;
+    for (const auto & entry : fs::directory_iterator(dir)) {
+        if(blacklistedBlocks[blacklistNum] == "false") { // if the block is not blacklisted
+            std::cout << "\nValidating block #" << blockNum << " File Name: " << base_name(entry.path().string()) << " Status: ";
+            if(isHiddens[blockNum] == "true" && flags[blockNum] == 0) { // checks if it mistakenly said it was hidden in the inventory, when it isn't
+                isHiddens[blockNum] = "false";
+                std::cout << "fixed";
+            } else {
+                std::cout << "ok";
+            }
+            blockNum++;
+        }
+        blacklistNum++;
+    }
+    std::cout << "\nAttempting to remove previous output...";
     if( remove( "sw_blocks.json" ) != 0 ) {
         std::cout << "\nError deleting file\n";
     } else {
@@ -403,7 +452,9 @@ int parseBlocks() {
                 writejson << "        \"category\":" << categories[i] << ",\n"; // writes category
                 writejson << "        \"mass\":" << masss[i] << ",\n"; // writes mass
                 writejson << "        \"cost\":" << costs[i] << ",\n"; // writes cost
-                writejson << "        \"deprecated\":" << deprecateds[i] << "\n"; // writes if its deprecated or not
+                writejson << "        \"deprecated\":" << deprecateds[i] << ",\n"; // writes if its deprecated or not
+                writejson << "        \"isHidden\":" << isHiddens[i] << "\n"; // writes if the item is hidden in the inventory
+                //writejson << "        \"flags\":\"" << std::bitset<32>(flags[i]) << "\",\n"; //writes the flags in bitwise form - debugging
                 writejson << "    }"; // end of block data
             }
         }
@@ -412,7 +463,8 @@ int parseBlocks() {
         std::cout << "Finished Writing Json!";
     } else {
         std::cout << "error creating and opening json file!";
-        }
+    }
+
     return true;
 }
 
