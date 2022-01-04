@@ -575,15 +575,19 @@ int parseBlocks() {
     fs::path logDir = "logs/" + gameVersion + "/blocks/" + timeStamp;
     bool logDirWasCreated = fs::create_directories(logDir, errCode);
     if(logDirWasCreated) {
-        std::cout << "\nlog directory made successfully\n";
+        std::cout << "\nLog directory made successfully\n\n";
     }
     std::ofstream writeLog;
     writeLog.open("logs/" + gameVersion + "/blocks/" + timeStamp + "/debuglog.txt");
     if(writeLog.is_open()) {
         writeLog << "Game Version: " << gameVersion << "\n"; // writes the game's version
         writeLog << "XMJ version: " << xmjVersion << "\n\n"; // writes this program's version
-        for(int i = 0; i >= success.size(); i++) {
-            writeLog << success[i] << "\n";
+        for(int i = 0; i < success.size(); i++) {
+            if(!success[i].empty()) {
+                writeLog << success[i] << "\n";
+            } else {
+                std::cout << "ERROR: apparently " << success[i] << " is empty!\n";
+            }
         }
         writeLog << "\nTotal Elapsed Time: " << totalElapsedTime << "\n";
         writeLog << "Reading Blacklist Time Taken: " << readBlacklistTimer << "\n";
