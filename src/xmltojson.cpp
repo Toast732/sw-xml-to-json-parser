@@ -5,6 +5,9 @@
 #include <regex>
 #include <fstream>
 #include <bitset>
+#include <ctime>
+#include <chrono>
+#include <windows.h>
 
 
 namespace fs = std::filesystem;
@@ -12,7 +15,7 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string version = "0.1.4";
+std::string xmjVersion = "0.1.5";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
@@ -20,7 +23,10 @@ fs::path dir;
 
 int isHiddenFlag = 536870912;
 
+std::string path;
 std::string defLoc = "\\rom\\data\\definitions";
+std::string verLoc = "\\";
+std::string verFileName = "log.txt";
 
 std::string getInput() {
     std::string input = "";
@@ -43,12 +49,67 @@ int help() {
 
 int start() {
     // Startup Message
-    std::cout << "Stormworks XML to Json Parser. Version " << version << ". \nCreated by Toastery.\n\n";
+    std::cout << "Stormworks XML to Json Parser. Version " << xmjVersion << ". \nCreated by Toastery.\n\n";
     help();
     return true;
 }
 
+auto getTime() {
+    return std::chrono::system_clock::now();
+}
+
+std::string getDate() {
+    time_t rawTime;
+    struct tm * timeInfo;
+    char buffer [80];
+    time(&rawTime);
+    timeInfo = localtime(&rawTime);
+    strftime(buffer, 80, "%Y-%m-%d %H-%M-%S", timeInfo);
+    return buffer;
+}
+
+std::string getVersion() {
+    using namespace std::string_literals;
+    auto versionStart = "version: "s;
+    auto versionEnd = ""s;
+    std::regex versions(versionStart + "(.*)" + versionEnd);
+
+    std::ifstream readVersion;
+    readVersion.open(path + verLoc + verFileName);
+
+    std::string line;
+    std::string swVersion = "noversionfound";
+
+    if(readVersion.is_open()) {
+        while(getline(readVersion, line)) {
+            std::smatch rawMatched;
+            auto lineToRead = line + ""s;
+            if(std::regex_search(lineToRead, rawMatched, versions)) { // gets "name" value 
+                if(rawMatched.size() == 2) {
+                    swVersion = rawMatched[1].str();
+                }
+            }
+        }
+    } else {
+        std::cout << "Error opening " + path + verLoc + verFileName;
+    }
+    readVersion.close();
+    return swVersion;
+}
+
 int parseBlocks() {
+    // log
+    auto totalStartTimer = getTime();
+    std::vector<std::string> success; // used in the log to check if everything succeeded
+    std::vector<std::string> errorReadingBlocksId; // stores which blocks had issues with reading its file by id
+    std::vector<std::string> errorReadingBlocksFile; // stores which blocks had issues with reading its file by file
+
+    // stats
+    int totalBlocks = 0; // the total blocks - num blacklisted - num deprecated - num hidden
+    int totalHidden = 0; // the total blocks - num blacklisted - num deprecated - num visible
+    int totalDeprecated = 0; // the total blocks - num blacklisted - num not deprecated
+
+    // actual script continues here
     std::vector<std::string> names;
     std::vector<std::string> fileNames;
     std::vector<std::string> descs;
@@ -128,6 +189,7 @@ int parseBlocks() {
 
 
     // starts reading config for the blacklist
+    auto readBlacklistTimerStart = getTime();
     readConfig.open("..\\src\\blockBlacklist.json"); 
     if(readConfig.is_open()){
         while(getline(readConfig, line)) {
@@ -139,16 +201,20 @@ int parseBlocks() {
                 }
             }
         }
+        success.push_back("Reading Blacklist: Ok");
     } else {
+        success.push_back("Reading Blacklist: Error");
         std::cout << "error, blockBlacklist did not open!";
         return false;
     }
     readConfig.close();
+    auto readBlacklistTimerEnd = getTime();
 
 
     // reads each block file, and with their id it assignes if its blacklisted or not
+    auto setBlacklistTimerStart = getTime();
     int blacklistNum = 0;
-    for (const auto & entry : fs::directory_iterator(dir)) { 
+    for (const auto & entry : fs::directory_iterator(dir)) {
         int blacklistedChecks = 0;
         std::cout << "Checking if block #" << blacklistNum << " is Blacklisted... ( ";
         for(int i = 0; i < blacklistedPaths.size(); i++) {
@@ -168,9 +234,11 @@ int parseBlocks() {
         }
         blacklistNum++;
     }
+    auto setBlacklistTimerEnd = getTime();
 
     // reads all block files
-    blacklistNum = 0; 
+    auto readAllTimerStart = getTime();
+    blacklistNum = 0;
     for (const auto & entry : fs::directory_iterator(dir)) {
         if(blacklistedBlocks[blacklistNum] == "false") { // if the block is not blacklisted
             std::string line;
@@ -203,6 +271,7 @@ int parseBlocks() {
                     }
                     if(std::regex_search(lineToRead, rawMatched, deprecated)) { // checks if its deprecated or not, via the name of the item, checks for "(Deprecated)" in the name
                         deprecateds[blockNum] = "true";
+                        totalDeprecated++;
                     }
                     else if(std::regex_search(lineToRead, rawMatched, desc)) { // gets "description" value 
                         if(rawMatched.size() == 2) {
@@ -400,14 +469,24 @@ int parseBlocks() {
                         }
                     }
                 }
+            } else {
+                errorReadingBlocksId.push_back("blockNum");
+                errorReadingBlocksFile.push_back(base_name(entry.path().string()));
             }
             blockNum++;
             readxml.close();
         }
         blacklistNum++;
     }
+    if(errorReadingBlocksId.size() >= 1) {
+        success.push_back("Reading Blocks: Error");
+    } else {
+        success.push_back("Reading Blocks: Ok");
+    }
+    auto readAllTimerEnd = getTime();
 
     // validates variables for mistakes
+    auto validateTimerStart = getTime();
     blockNum = 0;
     blacklistNum = 0;
     for (const auto & entry : fs::directory_iterator(dir)) {
@@ -419,18 +498,29 @@ int parseBlocks() {
             } else {
                 std::cout << "ok";
             }
+            if(isHiddens[blockNum] == "true") {
+                if(deprecateds[blockNum] == "false") {
+                    totalHidden++;
+                }
+            }
             blockNum++;
         }
         blacklistNum++;
     }
+    totalBlocks = blockNum - totalDeprecated - totalHidden;
+    auto validateTimerEnd = getTime();
+    auto removeTimerStart = getTime();
     std::cout << "\nAttempting to remove previous output...";
     if( remove( "sw_blocks.json" ) != 0 ) {
         std::cout << "\nError deleting file\n";
     } else {
         std::cout << "\nFile successfully deleted\n";
     }
+    auto removeTimerEnd = getTime();
+    auto writeJsonTimerStart = getTime();
     std::ofstream writejson;
     writejson.open ("sw_blocks.json");
+    std::cout << "\ncurrent dir:" << dir << "\n";
     if(writejson.is_open())
     {
         writejson << "[\n"; // opens file with [
@@ -460,12 +550,57 @@ int parseBlocks() {
         }
         writejson << "]"; // writes ] at the end of the file
         writejson.close();
-        std::cout << "Finished Writing Json!";
+        std::cout << "\nFinished writing sw_blocks.json\n";
+        success.push_back("Writing Json: Ok");
     } else {
-        std::cout << "error creating and opening json file!";
+        std::cout << "\nerror creating and opening json file!\n";
+        success.push_back("Writing Json: Error");
     }
+    auto writeJsonTimerEnd = getTime();
+    // output log
+    auto totalEndTimer = getTime();
+    std::string timeStamp = getDate();
+    std::chrono::duration<double> totalElapsedTime = totalEndTimer-totalStartTimer;
+    std::cout << "\nTotal Time Elapsed: " << totalElapsedTime.count() << "s\n";
+    std::cout << "Date: " << timeStamp << "\n";
 
-    return true;
+    std::chrono::duration<double> readBlacklistTimer = readBlacklistTimerEnd-readBlacklistTimerStart;
+    std::chrono::duration<double> setBlacklistTimer = setBlacklistTimerEnd-setBlacklistTimerStart;
+    std::chrono::duration<double> readAllTimer = readAllTimerEnd-readAllTimerStart;
+    std::chrono::duration<double> validateTimer = validateTimerEnd-validateTimerStart;
+    std::chrono::duration<double> writeJsonTimer = writeJsonTimerEnd-writeJsonTimerStart;
+
+    std::string gameVersion = getVersion();
+    std::error_code errCode;
+    fs::path logDir = "logs/" + gameVersion + "/blocks/" + timeStamp;
+    bool logDirWasCreated = fs::create_directories(logDir, errCode);
+    if(logDirWasCreated) {
+        std::cout << "\nlog directory made successfully\n";
+    }
+    std::ofstream writeLog;
+    writeLog.open("logs/" + gameVersion + "/blocks/" + timeStamp + "/debuglog.txt");
+    if(writeLog.is_open()) {
+        writeLog << "Game Version: " << gameVersion << "\n"; // writes the game's version
+        writeLog << "XMJ version: " << xmjVersion << "\n\n"; // writes this program's version
+        for(int i = 0; i >= success.size(); i++) {
+            writeLog << success[i] << "\n";
+        }
+        writeLog << "\nTotal Elapsed Time: " << totalElapsedTime << "\n";
+        writeLog << "Reading Blacklist Time Taken: " << readBlacklistTimer << "\n";
+        writeLog << "Setting Blacklist Time Taken: " << setBlacklistTimer << "\n";
+        writeLog << "Read All Blocks Time Taken: " << readAllTimer << "\n";
+        writeLog << "Validate Blocks Time Taken: " << validateTimer << "\n";
+        writeLog << "Write Json Time Taken: " << writeJsonTimer << "\n\n";
+        writeLog << "Total Amount of Blocks: " << totalBlocks << "\n";
+        writeLog << "Total Hidden Blocks: " << totalHidden << "\n";
+        writeLog << "Total Deprecated Blocks: " << totalDeprecated << "\n";
+    } else {
+        std::cout << "\nError from create dir: " << errCode.message() << " 1 = created, 0 = not created: " << logDirWasCreated << " \n";
+        std::cout << "\nError opening logs\\" << gameVersion << "\\blocks\\" << timeStamp << "\\debuglog.txt\n";
+    }
+    writeLog.close();
+
+    return start();
 }
 
 int parseLogic() {
@@ -478,7 +613,6 @@ int parseLogic() {
 int checkFile(bool correctPath) {
     int attempts = 1;
     while(correctPath == false) {
-        std::string path;
         getline(std::cin, path);
         dir = path + defLoc;
         std::cout << "\nChecking if " << dir << " is a valid directory...\n";
