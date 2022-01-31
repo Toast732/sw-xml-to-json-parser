@@ -453,7 +453,7 @@ int parseBlocks() {
                         if(rawMatched.size() == 2) {
                             flags[blockNum] = std::stoi(rawMatched[1].str());
                             // if the block is hidden in the inventory
-                            if ((flags[blockNum] & isHiddenFlag) == false) { // if the is hidden flag is flag
+                            if ((flags[blockNum] & isHiddenFlag) == false) { // if the is hidden flag is false
                                 // checks if the file name contains a suffix that is related to being a 2nd part of a block, and is hidden, if it goes through all of the suffix without a hit, it will be marked as not hidden
                                 int hiddenSuffixCheck = 0;
                                 for(int bID = 0; bID <= sizeof(hiddenItemSuffix)/sizeof(*hiddenItemSuffix); bID++) {
