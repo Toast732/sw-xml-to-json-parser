@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string xmjVersion = "0.1.5";
+std::string xmjVersion = "0.1.6";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
@@ -70,7 +70,7 @@ std::string getDate() {
 
 std::string getVersion() {
     using namespace std::string_literals;
-    auto versionStart = "version: "s;
+    auto versionStart = "version: v"s;
     auto versionEnd = ""s;
     std::regex versions(versionStart + "(.*)" + versionEnd);
 
@@ -159,8 +159,9 @@ int parseBlocks() {
 
     // cost
     auto costStart = "value=\""s;
-    auto costEnd = "\" flags="s;
-    std::regex cost(costStart + "(.*)" + costEnd);
+    auto costCapture = "([0-9]*)";
+    auto costEnd = "\" "s;
+    std::regex cost(costStart + costCapture + costEnd);
 
     // inputs
     auto inputsStart = "mode=\"1\" type=\""s;
@@ -470,10 +471,16 @@ int parseBlocks() {
                     }
                 }
             } else {
-                errorReadingBlocksId.push_back("blockNum");
+                errorReadingBlocksId.push_back(std::to_string(blockNum));
                 errorReadingBlocksFile.push_back(base_name(entry.path().string()));
             }
             blockNum++;
+            if(blockNum > costs.size()) { // print error, cause it had an issue reading a cost value
+                std::cout << "ERROR READING COST FOR BLOCK: " << base_name(entry.path().string()) << "\n";
+                costs.push_back("\"ERROR\"");
+                errorReadingBlocksId.push_back(std::to_string(blockNum - 1));
+                errorReadingBlocksFile.push_back(base_name(entry.path().string()));
+            }
             readxml.close();
         }
         blacklistNum++;
@@ -534,7 +541,6 @@ int parseBlocks() {
                 }
                 writejson << "        \"name\":" << names[i] << ",\n"; // writes name
                 writejson << "        \"fileName\":\"" << fileNames[i] << "\",\n"; // writes file Name
-                writejson << "        \"path\":\"public/assets/Blocks/\",\n"; // writes path
                 writejson << "        \"desc\":" << descs[i] << ",\n"; // writes desc
                 writejson << "        \"shortDesc\":" << shortDescs[i] << ",\n"; // writes shortDesc
                 writejson << "        \"inputs\":\"" << inputss[i] << "\",\n"; // writes inputs
