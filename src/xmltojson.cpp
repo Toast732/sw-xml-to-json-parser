@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 // variables
 bool started = false;
 bool stop = false;
-std::string xmjVersion = "0.1.6";
+std::string xmjVersion = "0.1.7";
 std::string commandPrefix = "-xmj ";
 std::string commands[2] = {"--getBlocks", "--getLogic"};
 std::string commandPaths[2] = {" (stormworksfolderpath)", " (stormworksfolderpath)"};
@@ -24,8 +24,8 @@ fs::path dir;
 int isHiddenFlag = 536870912;
 
 std::string path;
-std::string defLoc = "\\rom\\data\\definitions";
-std::string verLoc = "\\";
+std::string defLoc = "\\steamapps\\common\\Stormworks\\rom\\data\\definitions";
+std::string verLoc = "\\steamapps\\common\\Stormworks\\";
 std::string verFileName = "log.txt";
 
 std::string getInput() {
@@ -525,8 +525,19 @@ int parseBlocks() {
     }
     auto removeTimerEnd = getTime();
     auto writeJsonTimerStart = getTime();
+
+    std::string timeStamp = getDate();
+    std::string gameVersion = getVersion();
+    std::error_code errCode;
+
+    fs::path logDir = "output/" + gameVersion + "/blocks/" + timeStamp;
+    bool logDirWasCreated = fs::create_directories(logDir, errCode);
+    if(logDirWasCreated) {
+        std::cout << "\nLog directory made successfully\n\n";
+    }
+
     std::ofstream writejson;
-    writejson.open ("sw_blocks.json");
+    writejson.open ("output/"+ gameVersion + "/blocks/" + timeStamp + "/sw_blocks.json");
     std::cout << "\ncurrent dir:" << dir << "\n";
     if(writejson.is_open())
     {
@@ -565,7 +576,6 @@ int parseBlocks() {
     auto writeJsonTimerEnd = getTime();
     // output log
     auto totalEndTimer = getTime();
-    std::string timeStamp = getDate();
     std::chrono::duration<double> totalElapsedTime = totalEndTimer-totalStartTimer;
     std::cout << "\nTotal Time Elapsed: " << totalElapsedTime.count() << "s\n";
     std::cout << "Date: " << timeStamp << "\n";
@@ -576,15 +586,8 @@ int parseBlocks() {
     std::chrono::duration<double> validateTimer = validateTimerEnd-validateTimerStart;
     std::chrono::duration<double> writeJsonTimer = writeJsonTimerEnd-writeJsonTimerStart;
 
-    std::string gameVersion = getVersion();
-    std::error_code errCode;
-    fs::path logDir = "logs/" + gameVersion + "/blocks/" + timeStamp;
-    bool logDirWasCreated = fs::create_directories(logDir, errCode);
-    if(logDirWasCreated) {
-        std::cout << "\nLog directory made successfully\n\n";
-    }
     std::ofstream writeLog;
-    writeLog.open("logs/" + gameVersion + "/blocks/" + timeStamp + "/debuglog.txt");
+    writeLog.open("output/" + gameVersion + "/blocks/" + timeStamp + "/debuglog.txt");
     if(writeLog.is_open()) {
         writeLog << "Game Version: " << gameVersion << "\n"; // writes the game's version
         writeLog << "XMJ version: " << xmjVersion << "\n\n"; // writes this program's version
@@ -652,7 +655,7 @@ int main() {
         bool commandExists = false;
         for(int i = 0; i < sizeof(commands)/sizeof(commands[0]); i++) {
             if(selectedCommand == commandPrefix + commands[i]){
-                std::cout << "\nEnter the file path of stormworks\nDefault: C:\\Program Files\\Steam\\steamapps\\common\\Stormworks" << "\n> ";
+                std::cout << "\nEnter the file path of where stormwork's steam library folder is\nExample: C:\\Program Files\\Steam" << "\n> ";
                 bool correctPath = checkFile(false);
                 commandExists = true;
                 if(correctPath == false) {
